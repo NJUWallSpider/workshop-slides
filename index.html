@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>当运筹优化遇上大模型 —— 我的经历与AI高效应用指南</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    :root {
+      --bg-color: #f8fafc;
+      --slide-bg: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --border-color: #e2e8f0;
+      --accent-color: #475569;
+      --accent-light: #f1f5f9;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      --font-heading: 'Outfit', 'Noto Sans SC', sans-serif;
+      --font-body: 'Inter', 'Noto Sans SC', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Deck Container scales to fit screen */
+    .deck-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .slide-container {
+      position: relative;
+      width: 1120px;
+      height: 630px;
+      background: var(--slide-bg);
+      border-radius: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+      transform-origin: center center;
+      padding: 44px 48px;
+    }
+
+    /* Slide Structure */
+    .slide {
+      position: absolute;
+      top: 44px;
+      left: 48px;
+      right: 48px;
+      bottom: 44px;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.985) translateY(4px);
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+    }
+
+    /* Slide Header */
+    .slide-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    .slide-category {
+      font-family: var(--font-heading);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .slide-title {
+      font-family: var(--font-heading);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    /* Slide Content Areas */
+    .slide-body {
+      flex: 1;
+      min-height: 0; /* allows flex item to shrink inside flex container */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    /* Common Layouts */
+    .layout-split {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 36px;
+      height: 100%;
+      align-items: center;
+    }
+
+    .layout-split.reverse {
+      grid-template-columns: 0.9fr 1.1fr;
+    }
+
+    .layout-full {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .layout-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      flex: 1;
+      min-height: 0;
+      align-items: stretch;
+    }
+
+    /* Text elements */
+    p {
+      font-size: 17px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+
+    ul, ol {
+      list-style-position: outside;
+      margin-left: 20px;
+      color: var(--text-secondary);
+    }
+
+    li {
+      font-size: 16.5px;
+      line-height: 1.75;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    li strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    a {
+      color: var(--text-primary);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: opacity 0.2s ease;
+    }
+
+    a:hover {
+      opacity: 0.7;
+    }
+
+    /* Interactive lists mapping to images */
+    [data-target-img] {
+      transition: all 0.25s ease;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin-left: -8px;
+    }
+
+    [data-target-img]:hover {
+      background: var(--accent-light);
+      color: var(--text-primary);
+    }
+
+    [data-target-img].highlight-text {
+      background: var(--accent-light);
+      color: var(--text-primary);
+      transform: translateX(6px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Image Containers */
+    .visual-container {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .image-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: zoom-in;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .image-card img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .image-card .caption {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      font-weight: 500;
+      text-align: center;
+      font-family: var(--font-heading);
+    }
+
+    .image-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: #cbd5e1;
+    }
+
+    .image-card.highlight-visual {
+      transform: scale(1.03) translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: #64748b;
+    }
+
+    /* Special Image Grid Layouts */
+    .image-grid-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 12px;
+      height: 100%;
+    }
+
+    .image-grid-2x2 .image-card {
+      padding: 6px;
+    }
+
+    .image-grid-2x2 .image-card img {
+      max-height: 80%;
+    }
+
+    .image-grid-horizontal {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .image-grid-horizontal .image-card {
+      flex: 1;
+      height: 100%;
+      padding: 6px;
+    }
+
+    .image-grid-horizontal .image-card img {
+      max-height: 85%;
+    }
+
+    .image-grid-stack {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      gap: 12px;
+      height: 100%;
+      width: 100%;
+    }
+
+    .image-grid-stack .image-card {
+      width: 100%;
+      height: 100%;
+      padding: 10px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+      justify-content: flex-start;
+    }
+
+    .image-grid-stack .image-card img {
+      height: 100%;
+      width: auto;
+      max-height: 100%;
+      max-width: 50%;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+
+    .image-grid-stack .image-card .caption {
+      margin-top: 0;
+      text-align: left;
+      font-size: 14.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      flex: 1;
+      line-height: 1.45;
+    }
+
+    .layout-split.wide-visual {
+      grid-template-columns: 0.75fr 1.25fr;
+    }
+
+    /* Card Panels & Lists */
+    .card-panel {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-panel h3 {
+      font-family: var(--font-heading);
+      font-size: 18.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    /* Specific Slide Styles */
+    /* Cover */
+    .slide-cover {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 100%;
+      background: radial-gradient(circle at 80% 20%, rgba(241, 245, 249, 0.4) 0%, rgba(255, 255, 255, 1) 100%);
+    }
+
+    .cover-title {
+      font-family: var(--font-heading);
+      font-size: 46px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.25;
+      margin-bottom: 20px;
+      letter-spacing: -0.03em;
+    }
+
+    .cover-subtitle {
+      font-family: var(--font-heading);
+      font-size: 21px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin-bottom: 54px;
+      letter-spacing: -0.01em;
+    }
+
+    .cover-author {
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-color);
+      padding-top: 18px;
+      display: inline-block;
+      min-width: 220px;
+    }
+
+    /* Transition Slides */
+    .slide-transition {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 100%;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 12px;
+      padding: 60px;
+    }
+
+    .trans-num {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .trans-title {
+      font-family: var(--font-heading);
+      font-size: 38px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+
+    .trans-desc {
+      font-size: 17.5px;
+      color: var(--text-secondary);
+      max-width: 650px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Course Cards Grid */
+    .course-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .course-card {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .course-card span:first-child {
+      font-weight: 600;
+      font-size: 15.5px;
+      color: var(--text-primary);
+    }
+
+    .course-badge {
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 2px 6px;
+      background: #e2e8f0;
+      color: #475569;
+      border-radius: 4px;
+      font-family: var(--font-heading);
+    }
+
+    /* Custom layout comparison for Part II coding styles */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      height: 100%;
+    }
+
+    .compare-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .compare-card.recommended {
+      border-color: #94a3b8;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+    }
+
+    .compare-card.recommended::before {
+      content: 'RECOMMENDED';
+      position: absolute;
+      top: -10px;
+      right: 20px;
+      background: var(--text-primary);
+      color: #ffffff;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .compare-card h3 {
+      font-family: var(--font-heading);
+      font-size: 21px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: var(--text-primary);
+    }
+
+    .compare-tag {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    /* Bottom progress indicator */
+    .progress-bar-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--border-color);
+      z-index: 10;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--accent-color);
+      transition: width 0.3s ease;
+    }
+
+    /* Interactive Floating Navigation Panel */
+    .controls-panel {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      border-radius: 30px;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-xl);
+      z-index: 100;
+      transition: opacity 0.3s ease;
+    }
+
+    .controls-panel button {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .controls-panel button:hover {
+      background: var(--accent-light);
+      color: var(--text-primary);
+    }
+
+    .page-indicator-mini {
+      font-family: var(--font-heading);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      min-width: 50px;
+      text-align: center;
+      user-select: none;
+    }
+
+    .divider-v {
+      width: 1px;
+      height: 20px;
+      background: var(--border-color);
+      margin: 0 4px;
+    }
+
+    /* Overview Modal Style */
+    .overview-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(8px);
+      z-index: 900;
+      display: flex;
+      flex-direction: column;
+      padding: 40px 60px;
+      box-sizing: border-box;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .overview-modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .overview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+
+    .overview-header h2 {
+      font-family: var(--font-heading);
+      font-size: 28px;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .close-overview-btn, .close-btn {
+      font-size: 32px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: color 0.2s ease;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .close-overview-btn:hover, .close-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 20px;
+      overflow-y: auto;
+      padding-bottom: 40px;
+      flex: 1;
+    }
+
+    .overview-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 120px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .overview-card:hover {
+      transform: translateY(-3px);
+      border-color: #94a3b8;
+      box-shadow: var(--shadow-md);
+    }
+
+    .overview-card.active {
+      border-color: var(--text-primary);
+      border-width: 2px;
+      background: var(--bg-color);
+    }
+
+    .overview-card-num {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--border-color);
+      font-family: var(--font-heading);
+      line-height: 1;
+    }
+
+    .overview-card.active .overview-card-num {
+      color: var(--text-secondary);
+    }
+
+    .overview-card-category {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    .overview-card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: 6px;
+      flex-grow: 1;
+      line-height: 1.45;
+    }
+
+    /* Lightbox Modal */
+    .lightbox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      z-index: 1000;
+      padding: 40px;
+    }
+
+    .lightbox.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .lightbox img {
+      max-width: 90%;
+      max-height: 80%;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      transform: scale(0.96);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .lightbox.active img {
+      transform: scale(1);
+    }
+
+    .lightbox-caption {
+      color: #f8fafc;
+      margin-top: 16px;
+      font-size: 15px;
+      font-family: var(--font-heading);
+      text-align: center;
+      max-width: 600px;
+      line-height: 1.5;
+    }
+
+    .lightbox .close-btn {
+      position: absolute;
+      top: 24px;
+      right: 32px;
+      color: #cbd5e1;
+      font-size: 40px;
+    }
+
+    .lightbox .close-btn:hover {
+      color: #ffffff;
+    }
+
+    /* Helper styles for highlights */
+    .highlight-section-title {
+      font-family: var(--font-heading);
+      font-size: 15.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-top: 14px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="deck-wrapper">
+    <div class="slide-container">
+
+      <!-- SLIDE 1: COVER -->
+      <div class="slide active" id="slide-page-1" data-category="Intro">
+        <div class="slide-body">
+          <div class="slide-cover">
+            <h1 class="cover-title">当运筹优化遇上大模型</h1>
+            <p class="cover-subtitle">我的华为软挑季军之路与 AI 高效应用指南</p>
+            <div class="cover-author">汇报人：白昊臻</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: TRANSITION 1 -->
+      <div class="slide" id="slide-page-2" data-category="Part I">
+        <div class="slide-body">
+          <div class="slide-transition">
+            <div class="trans-num">Part I</div>
+            <h2 class="trans-title">学习路径与学科体系分享</h2>
+            <p class="trans-desc">大学经历、自学课程、研究兴趣以及工业工程体系搭建路径</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: FRESHMAN 1 -->
+      <div class="slide" id="slide-page-3" data-category="我的大一">
+        <div class="slide-header">
+          <div class="slide-category">Part I: 学习路径与学科体系</div>
+          <h2 class="slide-title">我的大学经历 —— 大一：起步与抉择</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <ul>
+                <li data-target-img="img-freshman-school"><strong>工科试验班</strong>：大一入学，面对通识学科进行积极探索与摸索。</li>
+                <li data-target-img="img-freshman-school"><strong>生物医学工程</strong>：初选方向，跨校区到仙林校区参加大创项目。</li>
+                <li data-target-img="img-freshman-or"><strong>运筹优化算法工程师？</strong>：发现自己对运筹优化算法更感兴趣，开始寻求发展转型。</li>
+                <li data-target-img="img-freshman-or"><strong>目标工业工程</strong>：确立分流志愿。</li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-grid-stack">
+                <div class="image-card" id="img-freshman-school">
+                  <img src="现工院.png" alt="现工院">
+                  <div class="caption">现代工程与应用科学学院（仙林校区）</div>
+                </div>
+                <div class="image-card" id="img-freshman-or">
+                  <img src="运筹优化工程师.png" alt="运筹优化工程师">
+                  <div class="caption">运筹优化算法工程师的职业愿景</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: FRESHMAN 2 -->
+      <div class="slide" id="slide-page-4" data-category="我的大一">
+        <div class="slide-header">
+          <div class="slide-category">Part I: 学习路径与学科体系</div>
+          <h2 class="slide-title">我的大学经历 —— 大一：自学之路</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split wide-visual">
+            <div>
+              <ul>
+                <li data-target-img="img-csdiy"><strong>打通计算机基础</strong>：大一不设限，依托互联网名校资源构建自己的知识图谱。推荐使用 <a href="https://csdiy.wiki/" target="_blank">csdiy.wiki</a>（CS自学指南）进行自主选课。</li>
+                <li data-target-img="img-cs61a"><strong>大一下学期</strong>：自学 UC Berkeley 经典课程 <strong>CS61A</strong> (SICP 计算机程序的构造和解释)。</li>
+                <li data-target-img="img-cs61b"><strong>大一暑假核心突击</strong>：<strong>CS61B</strong> (数据结构)，编程与算法设计根基。</li>
+                <li data-target-img="img-data100"><strong>数据科学探索</strong>：<strong>Data100</strong> (数据科学原理)，掌握数据清洗、建模与分析全流程。</li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-grid-2x2">
+                <div class="image-card" id="img-csdiy">
+                  <img src="CSDIY.png" alt="CSDIY Wiki">
+                  <div class="caption">CSDIY Wiki 导航</div>
+                </div>
+                <div class="image-card" id="img-cs61a">
+                  <img src="CS61A.png" alt="CS61A">
+                  <div class="caption">CS61A Berkeley</div>
+                </div>
+                <div class="image-card" id="img-cs61b">
+                  <img src="CS61B.png" alt="CS61B">
+                  <div class="caption">CS61B Data Structures</div>
+                </div>
+                <div class="image-card" id="img-data100">
+                  <img src="Data100.png" alt="Data100">
+                  <div class="caption">Data100 Principles of Data Science</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: FRESHMAN 3 -->
+      <div class="slide" id="slide-page-5" data-category="我的大一">
+        <div class="slide-header">
+          <div class="slide-category">Part I: 学习路径与学科体系</div>
+          <h2 class="slide-title">我的大学经历 —— 大一：初探数学建模</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <ul>
+                <li data-target-img="img-mcm-train"><strong>数学建模大赛？</strong>：了解数模竞赛。</li>
+                <li data-target-img="img-mcm-train"><strong>数模培训</strong></li>
+                <li data-target-img="img-mcm-train"><strong>算法编程实践</strong></li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-card" id="img-mcm-train">
+                <img src="数学建模培训.png" alt="数学建模培训">
+                <div class="caption">数学建模培训大纲</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: SOPHOMORE 1 -->
+      <div class="slide" id="slide-page-6" data-category="我的大二">
+        <div class="slide-header">
+          <div class="slide-category">Part I: 学习路径与学科体系</div>
+          <h2 class="slide-title">我的大学经历 —— 大二：运筹优化实验室</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split wide-visual">
+            <div>
+              <ul>
+                <li><strong>进入运筹优化实验室</strong>：申请并获准进入核心实验室。</li>
+                <li data-target-img="img-lab1"><strong>工位与科研资源</strong>：获得属于自己的工位。</li>
+                <li data-target-img="img-lab2"><strong>强力算力资源</strong>：获得了充足的 CPU / GPU 算力资源支持。</li>
+                <li data-target-img="img-lab3"><strong>名师指导</strong>：老师定期悉心指导，第一时间接触国际前沿学术动态与竞赛通知。</li>
+                <li><strong>实验室主页</strong>：访问 <a href="http://1.13.183.74/" target="_blank">1.13.183.74</a> 获取更多资讯。</li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-grid-2x2">
+                <div class="image-card" id="img-lab1">
+                  <img src="实验室1.png" alt="实验室照片1">
+                  <div class="caption">实验室研讨间</div>
+                </div>
+                <div class="image-card" id="img-lab2">
+                  <img src="实验室2.png" alt="实验室照片2">
+                  <div class="caption">实验室打印机与咖啡机</div>
+                </div>
+                <div class="image-card" id="img-lab3">
+                  <img src="实验室3.png" alt="实验室照片3">
+                  <div class="caption">实验室老师办公室</div>
+                </div>
+                <div class="image-card" id="img-lab4">
+                  <img src="实验室4.png" alt="实验室照片4">
+                  <div class="caption">实验室工位一角</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: SOPHOMORE 2 -->
+      <div class="slide" id="slide-page-7" data-category="我的大二">
+        <div class="slide-header">
+          <div class="slide-category">Part I: 学习路径与学科体系</div>
+          <h2 class="slide-title">我的大学经历 —— 大二：科研与竞赛</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <ul>
+                <li><strong>整数规划预处理科研</strong>：开启科研项目，整数规划的预处理方法研究。<em>（没有什么实质成果……）</em></li>
+                <li data-target-img="img-comp-algo"><strong>2025 华为软件精英挑战赛</strong>：正式开启职业级算法竞赛之路。
+                  <ul>
+                    <li>规则透明：评分完全公开、透明，全凭代码说话。</li>
+                    <li>核心精神：<strong>“Talk is cheap. Show me the code.”</strong></li>
+                  </ul>
+                </li>
+                <li><strong>美赛与夏令营</strong>：寒假参与美国大学生数学建模竞赛。暑假获邀参加 CTS 华山论剑算法挑战赛、大三下参加清华 IE 亮剑夏令营。</li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-card" id="img-comp-algo">
+                <img src="算法竞赛.png" alt="算法竞赛">
+                <div class="caption">算法竞赛与排行榜</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: JUNIOR 1 -->
+      <div class="slide" id="slide-page-8" data-category="我的大三">
+        <div class="slide-header">
+          <div class="slide-category">Part I: 学习路径与学科体系</div>
+          <h2 class="slide-title">我的大学经历 —— 大三：失利与成就</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <ul>
+                <li data-target-img="img-paper"><strong>继续攻克科研</strong>：将大二积累的规划思路深入推进，开始产出科研论文。</li>
+                <li data-target-img="img-award"><strong>在失败中复盘</strong>：经历机器人路径规划大赛与美赛的失利，不断反思算法设计缺陷和工程细节上的短板。</li>
+                <li data-target-img="img-award"><strong>2026 华为软件精英挑战赛 —— 全国季军</strong>：顶住多方压力，一路突破，获得全国季军。</li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-grid-stack">
+                <div class="image-card" id="img-paper">
+                  <img src="论文截图.png" alt="论文截图">
+                  <div class="caption">整数规划科研论文成果</div>
+                </div>
+                <div class="image-card" id="img-award">
+                  <img src="获奖照片.png" alt="获奖照片">
+                  <div class="caption">华为软挑领奖现场</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: COURSES -->
+      <div class="slide" id="slide-page-9" data-category="学科体系">
+        <div class="slide-header">
+          <div class="slide-category">Part I: 学习路径与学科体系</div>
+          <h2 class="slide-title">我上过的跨专业课程与研究兴趣</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div class="course-grid">
+              <div class="course-card">
+                <span>微电子与电路基础</span>
+                <span class="course-badge">大一上</span>
+              </div>
+              <div class="course-card">
+                <span>离散数学</span>
+                <span class="course-badge">大一上</span>
+              </div>
+              <div class="course-card">
+                <span>数值最优化</span>
+                <span class="course-badge">大三上</span>
+              </div>
+              <div class="course-card">
+                <span>计算机网络</span>
+                <span class="course-badge">大三上</span>
+              </div>
+              <div class="course-card">
+                <span>计算机系统基础</span>
+                <span class="course-badge">大三上</span>
+              </div>
+              <div class="course-card">
+                <span>Rust 编程基础</span>
+                <span class="course-badge">大三下</span>
+              </div>
+              <div class="course-card">
+                <span>组合数学</span>
+                <span class="course-badge">大三下</span>
+              </div>
+              <div class="course-card">
+                <span>计算思维问题求解</span>
+                <span class="course-badge">大三下</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px; justify-content: center; height: 100%;">
+              <div class="card-panel">
+                <h3>感兴趣的领域</h3>
+                <p style="font-size: 15.5px; margin-bottom: 0;">
+                  整数规划算法与求解器工程 • 组合优化 (近似算法、随机算法) • 机器学习加速整数规划 • 约束规划 (CP) 与 SAT 求解器 • 大模型推理优化
+                </p>
+              </div>
+              <div class="card-panel">
+                <h3>遗憾与感悟</h3>
+                <p style="font-size: 15.5px; margin-bottom: 0; line-height: 1.5;">
+                  没来得及做的事：志愿时长不足、错过了很多院系活动、愉快玩耍的时间太少。
+                </p>
+              </div>
+              <div class="card-panel" style="border-left: 4px solid var(--text-primary); background: var(--accent-light); padding: 14px 20px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-sm);">
+                <span style="font-size: 20px; color: var(--text-primary); line-height: 1;">💡</span>
+                <p style="font-size: 15.5px; font-weight: 600; color: var(--text-primary); margin-bottom: 0; line-height: 1.5; font-style: italic;">
+                  “尽情地探索自己的兴趣，希望对大家未来的规划有所帮助。”
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: INDUSTRIAL ENGINEERING 1 -->
+      <div class="slide" id="slide-page-10" data-category="学科体系">
+        <div class="slide-header">
+          <div class="slide-category">Part I: 学习路径与学科体系</div>
+          <h2 class="slide-title">工业工程学习体系 —— 交叉性与深度</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <ul>
+                <li data-target-img="img-ie-system"><strong>多维交叉的定位</strong>：工业工程是一个高度综合的学科，涵盖<strong>运筹优化</strong>、<strong>数据分析</strong>、<strong>人工智能</strong>与<strong>工程管理</strong>。</li>
+                <li data-target-img="img-ie-system"><strong>广度与深度的权衡</strong>：交叉性强也意味着对每一个分支的课堂教育可能广而不深，需要同学们有主动探索并深入一个细分方向的意识。</li>
+                <li data-target-img="img-ie-system"><strong>运筹学作为关键纽带</strong>：运筹学本身也高度交叉将纯数学（优化理论）、计算机科学以及人工智能串联在一起。</li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-card" id="img-ie-system">
+                <img src="工业工程体系.png" alt="工业工程体系">
+                <div class="caption">工业工程技术框架图</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 11: INDUSTRIAL ENGINEERING 2 -->
+      <div class="slide" id="slide-page-11" data-category="学科体系">
+        <div class="slide-header">
+          <div class="slide-category">Part I: 学习路径与学科体系</div>
+          <h2 class="slide-title">工业工程学习体系 —— 如何进行深入学习</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <ul>
+                <li><strong>深入学习的三大支柱</strong>：
+                  <ol>
+                    <li><strong>竞赛牵引</strong>：在各大算法与建模比赛中高强度倒逼工程落地。</li>
+                    <li><strong>进入科研</strong>：寻找老师进入实验室参与科研项目，站在前人肩膀上。</li>
+                    <li><strong>跨系选课/网课</strong>：主动选修数学系、计算机系、人工智能学院的核心硬核课。</li>
+                  </ol>
+                </li>
+                <li data-target-img="img-ie-chart"><strong>院系名师推荐</strong>：
+                  <ul>
+                    <li><strong>连续优化、博弈论</strong>：陈彩华老师、占杨老师</li>
+                    <li><strong>数据分析、统计</strong>：刘帆老师</li>
+                    <li><strong>离散优化</strong>：胡骞老师、罗志兴老师</li>
+                    <li><strong>项目管理</strong>：刘琰老师</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-card" id="img-ie-chart">
+                <img src="IE结构图.png" alt="IE结构图">
+                <div class="caption">工业与系统工程知识拓扑图</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 12: TRANSITION 2 -->
+      <div class="slide" id="slide-page-12" data-category="Part II">
+        <div class="slide-body">
+          <div class="slide-transition">
+            <div class="trans-num">Part II</div>
+            <h2 class="trans-title">AI 经验分享</h2>
+            <p class="trans-desc">在大模型时代，如何合理使用 AI Agent 工具，实现代码流派转型与高效工程质量保障</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 13: ENVIRONMENT SETUP -->
+      <div class="slide" id="slide-page-13" data-category="环境搭建">
+        <div class="slide-header">
+          <div class="slide-category">Part II: AI 经验分享</div>
+          <h2 class="slide-title">在写代码之前 —— 现代 AI 效率环境搭建</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <ul>
+                <li><strong>主流操作系统</strong>：强烈建议使用 <strong>macOS</strong> 或者 <strong>Linux</strong> 系统，Windows 用户推荐安装 <strong>WSL2</strong>，避免不必要的环境依赖报错。</li>
+                <li><strong>熟悉终端命令行操作</strong>：命令行是与各类 AI CLI 交互的最高效手段。</li>
+                <li data-target-img="img-claude"><strong>选择你的 AI Agent 工具</strong>：
+                  <ul>
+                    <li><strong>Claude Code + Deepseek API</strong>：极强的终端命令执行与代码搜索重构能力。</li>
+                    <li><strong>Cursor</strong>：全功能 IDE 代码补全及 Chat 助理。</li>
+                    <li><strong>Codex</strong> 等。</li>
+                  </ul>
+                </li>
+                <li><strong>必须具备科学上网能力</strong>：保障 GitHub / Hugging Face / Google Scholar / Docker 的顺畅拉取与学术查阅。</li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-card" id="img-claude">
+                <img src="Claude.png" alt="Claude Code">
+                <div class="caption">Claude Code Agent 命令行运行界面</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 14: CODING PARADIGMS -->
+      <div class="slide" id="slide-page-14" data-category="AI 工作流">
+        <div class="slide-header">
+          <div class="slide-category">Part II: AI 经验分享</div>
+          <h2 class="slide-title">代码流派 —— 交互问答流 vs 计划流</h2>
+        </div>
+        <div class="slide-body">
+          <div class="compare-grid">
+            <div class="compare-card">
+              <div>
+                <div class="compare-tag">EXPLORATORY</div>
+                <h3>交互问答流</h3>
+                <p style="font-size: 15.5px;">每次抛给 AI 一个独立的小任务，等 AI 产出代码后，人工评估并给反馈指导，进行下一步微调。</p>
+                <p style="font-size: 15.5px; margin-top: 10px;"><strong>提示词特征</strong>：现想现写，可能带有一定模糊性，允许探索与发散。</p>
+              </div>
+              <div class="card-panel" style="padding: 10px 14px; font-size: 14.5px;">
+                <strong>适用场景</strong>：自己对如何实现还没完全想清，处于<strong>探索性分析</strong>阶段。例如：想分析装箱算法当前的性能瓶颈在哪里，根据实验数据再做决定。
+              </div>
+            </div>
+            <div class="compare-card recommended">
+              <div>
+                <div class="compare-tag">STRUCTURED</div>
+                <h3>计划流</h3>
+                <p style="font-size: 15.5px;">在写代码前先整理完整的计划文档（如 <code>implementation_plan.md</code>），详细梳理每一步逻辑，尽可能精确化提示词，一次性交付 AI 逐步执行。</p>
+                <p style="font-size: 15.5px; margin-top: 10px;"><strong>提示词特征</strong>：极高精度，前置排查功能和逻辑漏洞。</p>
+              </div>
+              <div class="card-panel" style="padding: 10px 14px; font-size: 14.5px;">
+                <strong>适用场景</strong>：自身对项目<strong>完全掌控</strong>。例如：已完全理清一个装箱启发式算法的执行步骤，让 AI 负责无错且高速的代码输出。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 15: TESTING -->
+      <div class="slide" id="slide-page-15" data-category="质量保障">
+        <div class="slide-header">
+          <div class="slide-category">Part II: AI 经验分享</div>
+          <h2 class="slide-title">代码写完了。然后呢？ —— 质量保障体系</h2>
+        </div>
+        <div class="slide-body">
+          <p style="margin-bottom: 20px;">大模型生成的代码看似完美，但必须通过测试进行闭环验证。我们推荐的三重保障方案：</p>
+          <div class="layout-grid-3">
+            <div class="card-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+              <div>
+                <span style="font-size: 12.5px; font-weight: 700; color: var(--text-muted);">PHASE 01</span>
+                <h3 style="margin-top: 6px; margin-bottom: 8px;">人工 Code Review</h3>
+                <p style="font-size: 15px; line-height: 1.5;">逐行阅读并复核核心业务逻辑 and 边界条件。虽然效率相对低下，但这依然是处理算法复杂死锁或越界时的<strong>最终审查手段</strong>。</p>
+              </div>
+            </div>
+            <div class="card-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+              <div>
+                <span style="font-size: 12.5px; font-weight: 700; color: var(--text-muted);">PHASE 02</span>
+                <h3 style="margin-top: 6px; margin-bottom: 8px;">静态测试 (Static)</h3>
+                <p style="font-size: 15px; line-height: 1.5;">把生成的代码和设计计划重新输入给高级大模型，进行<strong>静态复盘</strong>。令其交叉检查是否存在函数未调用、变量未初始化或与计划细节不一致的问题。</p>
+              </div>
+            </div>
+            <div class="card-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+              <div>
+                <span style="font-size: 12.5px; font-weight: 700; color: var(--text-muted);">PHASE 03</span>
+                <h3 style="margin-top: 6px; margin-bottom: 8px;">动态测试 (Dynamic)</h3>
+                <p style="font-size: 15px; line-height: 1.5;"><strong>“测试算例可以让 AI 写！我们仅需把关正确性。”</strong> 设计输入输出，由 Agent 自行构建 Runner。引入日志（Logs）以实现错误定位，防止 AI 在报错时抓瞎。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 16: AI & COMPETITIONS -->
+      <div class="slide" id="slide-page-16" data-category="AI 与竞赛">
+        <div class="slide-header">
+          <div class="slide-category">Part II: AI 经验分享</div>
+          <h2 class="slide-title">AI 可以帮我打算法比赛吗？</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <div class="highlight-section-title">大模型在复杂运筹优化竞赛中的局限性</div>
+              <ol style="font-size: 15.5px;">
+                <li><strong>无法完成长链条逻辑推演</strong>：对于大规模规划（如机组排班、列生成），AI 往往只能写出低效的通用局部解，无法跨越数十步推演思考出最高效的框架。</li>
+                <li><strong>Agent 自动演化易陷入“死胡同”</strong>：完全交给 Agent 自我编写并测试，AI 往往倾向于在旧代码上打补丁，而非重构算法核心，从而写出“屎山”。</li>
+                <li><strong>上下文窗口与逻辑能力的妥协</strong>：长上下文容易使 AI “降智”漏掉变量，短上下文又无法理解全局模块关系。</li>
+              </ol>
+            </div>
+            <div style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
+              <div class="card-panel">
+                <h3 style="margin-bottom: 8px;">人机协同最佳实践</h3>
+                <p style="font-size: 15.5px; line-height: 1.5; margin-bottom: 0;">
+                  <strong>人脑负责核心</strong>：主导数学建模 (MILP)、启发式元启发式机制设计与重构决策。<br><br>
+                  <strong>AI 负责加速</strong>：写基础类接口、转换数据格式、优化底层计算性能、编写可视化分析脚本以及测试脚本。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 17: GIT VERSION CONTROL -->
+      <div class="slide" id="slide-page-17" data-category="版本管理">
+        <div class="slide-header">
+          <div class="slide-category">Part II: AI 经验分享</div>
+          <h2 class="slide-title">一定要使用版本管理！</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <ul>
+                <li data-target-img="img-git-workflow"><strong>随意回溯</strong>：随意回溯至之前的任意代码版本，写崩了、改乱了也完全不怕，随时一键还原（<code>git checkout</code>）。</li>
+                <li data-target-img="img-git-workflow"><strong>分支探索</strong>：从同一个稳定起点同时开启多分支探索（如不同启发式算子开发），成功了再合并（<code>git merge</code>），失败了随时丢弃。</li>
+                <li data-target-img="img-git-workflow"><strong>多人协作</strong>：依托 GitHub / GitLab，支持多人协同开发，自动合并代码，告别“传压缩包”或“代码_v2_最新版.cpp”的低效做法。</li>
+                <li data-target-img="img-git-workflow"><strong>科研归档与云端防丢</strong>：Commit 历史就是天然的最详尽“实验日志”，记录每次参数与逻辑调整；同时云端托管保障代码资产永不丢失。</li>
+              </ul>
+            </div>
+            <div class="visual-container">
+              <div class="image-card" id="img-git-workflow">
+                <img src="git_workflow.png" alt="Git 分支与协作工作流">
+                <div class="caption">Git 规范化分支与协作工作流</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 18: JOIN US -->
+      <div class="slide" id="slide-page-18" data-category="加入我们">
+        <div class="slide-header">
+          <div class="slide-category">Part II: AI 经验分享</div>
+          <h2 class="slide-title">如何开启你的第一个算法竞赛？</h2>
+        </div>
+        <div class="slide-body">
+          <div class="layout-split">
+            <div>
+              <h3 style="font-family: var(--font-heading); margin-bottom: 12px;">加入我们！</h3>
+              <p>热烈欢迎对算法竞赛、运筹优化及人工智能感兴趣的同学，申请加入我们的<strong>运筹优化实验室</strong>。</p>
+              <p>在实验室，你可以获得丰富的实战算法比赛传承、充足的算力设施，以及经验丰富的老师和伙伴指导，一同开启算法挑战之旅！</p>
+              <p style="margin-top: 16px; font-size: 15px; font-weight: 500; line-height: 1.6;">
+                学习指南推荐：<a href="https://njuwallspider.github.io/IECourseGuide/" target="_blank">NJU IE 学习指南</a><br>
+                课件链接请查看文档配套的备赛手册与代码示例。
+              </p>
+            </div>
+            <div class="visual-container">
+              <div class="image-grid-horizontal">
+                <div class="image-card" id="img-qq">
+                  <img src="QQ.png" alt="QQ群二维码">
+                  <div class="caption">扫码加入交流群</div>
+                </div>
+                <div class="image-card" id="img-ie-guide">
+                  <img src="IEGuide.png" alt="IE 备赛指南">
+                  <div class="caption">NJU IEGuide</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 19: QA -->
+      <div class="slide" id="slide-page-19" data-category="End">
+        <div class="slide-body">
+          <div class="slide-cover">
+            <h1 class="cover-title" style="font-size: 52px; font-weight: 600; color: var(--text-primary);">Q & A</h1>
+            <p class="cover-subtitle" style="font-size: 20px; font-weight: 400; color: var(--text-secondary); margin-bottom: 24px;">感谢聆听，欢迎交流！</p>
+            <div style="width: 80px; height: 1px; background: var(--border-color); margin: 0 auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Progress Bar -->
+      <div class="progress-bar-container">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Interactive Controls Overlay Panel -->
+  <div class="controls-panel">
+    <button id="prev-btn" title="上一页 (← / Backspace)">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <div class="page-indicator-mini">
+      <span id="current-slide-num">1</span> / <span id="total-slides-num">19</span>
+    </div>
+    <button id="next-btn" title="下一页 (→ / Space)">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+    </button>
+    <div class="divider-v"></div>
+    <button id="overview-btn" title="目录概览 (O)">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+    <button id="fullscreen-btn" title="全屏 (F)">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Overview Grid Modal -->
+  <div id="overview-modal" class="overview-modal">
+    <div class="overview-header">
+      <h2>幻灯片目录概览</h2>
+      <span class="close-overview-btn" id="close-overview-btn">&times;</span>
+    </div>
+    <div class="overview-grid" id="overview-grid"></div>
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox" class="lightbox">
+    <span class="close-btn" id="close-lightbox-btn">&times;</span>
+    <img id="lightbox-img" src="" alt="Zoomed view">
+    <div id="lightbox-caption" class="lightbox-caption"></div>
+  </div>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    const slideContainer = document.querySelector('.slide-container');
+
+    // Initialize slide count text
+    document.getElementById('total-slides-num').innerText = totalSlides;
+
+    // Rescale slide container based on window size
+    function resizeDeck() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const scale = Math.min((w * 0.92) / 1120, (h * 0.92) / 630);
+      const isFullscreen = !!document.fullscreenElement || !!document.webkitFullscreenElement;
+      const maxScale = isFullscreen ? 1.6 : 1.25;
+      const finalScale = Math.min(scale, maxScale);
+      slideContainer.style.transform = `scale(${finalScale})`;
+    }
+    
+    window.addEventListener('resize', resizeDeck);
+    window.addEventListener('load', resizeDeck);
+    document.addEventListener('fullscreenchange', resizeDeck);
+    document.addEventListener('webkitfullscreenchange', resizeDeck);
+
+    // Slide navigation
+    function goToSlide(index) {
+      if (index < 0 || index >= totalSlides) return;
+      
+      slides[currentSlide].classList.remove('active');
+      currentSlide = index;
+      slides[currentSlide].classList.add('active');
+      
+      // Update UI elements
+      document.getElementById('current-slide-num').innerText = currentSlide + 1;
+      const progressPercent = ((currentSlide) / (totalSlides - 1)) * 100;
+      document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+      // Update URL hash for sharing state
+      window.location.hash = `slide-${currentSlide + 1}`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides - 1) {
+        goToSlide(currentSlide + 1);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        goToSlide(currentSlide - 1);
+      }
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      // Don't navigate if user is in an overlay
+      if (document.getElementById('lightbox').classList.contains('active')) {
+        if (e.key === 'Escape') closeLightbox();
+        return;
+      }
+      if (document.getElementById('overview-modal').classList.contains('active')) {
+        if (e.key === 'Escape' || e.key.toLowerCase() === 'o') closeOverview();
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowRight':
+        case ' ':
+        case 'PageDown':
+          e.preventDefault();
+          nextSlide();
+          break;
+        case 'ArrowLeft':
+        case 'Backspace':
+        case 'PageUp':
+          e.preventDefault();
+          prevSlide();
+          break;
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          toggleFullscreen();
+          break;
+        case 'o':
+        case 'O':
+          e.preventDefault();
+          openOverview();
+          break;
+      }
+    });
+
+    // Mobile Swipe Navigation
+    let touchStartX = 0;
+    let touchEndX = 0;
+    
+    document.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, false);
+
+    document.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      handleSwipe();
+    }, false);
+
+    function handleSwipe() {
+      const threshold = 50;
+      if (touchEndX < touchStartX - threshold) {
+        nextSlide(); // swipe left -> next
+      } else if (touchEndX > touchStartX + threshold) {
+        prevSlide(); // swipe right -> prev
+      }
+    }
+
+    // UI Buttons Action
+    document.getElementById('next-btn').addEventListener('click', nextSlide);
+    document.getElementById('prev-btn').addEventListener('click', prevSlide);
+    document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+    document.getElementById('overview-btn').addEventListener('click', openOverview);
+    document.getElementById('close-overview-btn').addEventListener('click', closeOverview);
+
+    // Fullscreen API
+    function toggleFullscreen() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.error(`Error attempting to enable fullscreen: ${err.message}`);
+          });
+        } else if (document.documentElement.webkitRequestFullscreen) {
+          document.documentElement.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    }
+
+    // Overview Grid System
+    const overviewModal = document.getElementById('overview-modal');
+    const overviewGrid = document.getElementById('overview-grid');
+
+    function openOverview() {
+      overviewGrid.innerHTML = '';
+      slides.forEach((slide, index) => {
+        const titleEl = slide.querySelector('h2') || slide.querySelector('h1');
+        const title = titleEl ? titleEl.innerText : `Slide ${index + 1}`;
+        const category = slide.getAttribute('data-category') || '介绍';
+
+        const card = document.createElement('div');
+        card.className = `overview-card ${index === currentSlide ? 'active' : ''}`;
+        card.innerHTML = `
+          <div class="overview-card-num">${String(index + 1).padStart(2, '0')}</div>
+          <div>
+            <div class="overview-card-category">${category}</div>
+            <div class="overview-card-title">${title}</div>
+          </div>
+        `;
+        
+        card.addEventListener('click', () => {
+          goToSlide(index);
+          closeOverview();
+        });
+        
+        overviewGrid.appendChild(card);
+      });
+      overviewModal.classList.add('active');
+    }
+
+    function closeOverview() {
+      overviewModal.classList.remove('active');
+    }
+
+    // Lightbox image zoom system
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxCaption = document.getElementById('lightbox-caption');
+
+    document.querySelectorAll('.image-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const img = card.querySelector('img');
+        const caption = card.querySelector('.caption');
+        if (img) {
+          lightboxImg.src = img.src;
+          lightboxCaption.innerText = caption ? caption.innerText : '';
+          lightbox.classList.add('active');
+        }
+      });
+    });
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+    }
+
+    document.getElementById('close-lightbox-btn').addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e) => {
+      if (e.target !== lightboxImg && e.target !== lightboxCaption) {
+        closeLightbox();
+      }
+    });
+
+    // Cross highlighting logic (Hover over bullet highlights corresponding image & vice versa)
+    document.querySelectorAll('[data-target-img]').forEach(listItem => {
+      listItem.addEventListener('mouseenter', () => {
+        const targetId = listItem.getAttribute('data-target-img');
+        const targetVisual = document.getElementById(targetId);
+        if (targetVisual) {
+          targetVisual.classList.add('highlight-visual');
+        }
+      });
+
+      listItem.addEventListener('mouseleave', () => {
+        const targetId = listItem.getAttribute('data-target-img');
+        const targetVisual = document.getElementById(targetId);
+        if (targetVisual) {
+          targetVisual.classList.remove('highlight-visual');
+        }
+      });
+    });
+
+    document.querySelectorAll('.image-card[id]').forEach(imgCard => {
+      imgCard.addEventListener('mouseenter', () => {
+        const targetListItem = document.querySelector(`[data-target-img="${imgCard.id}"]`);
+        if (targetListItem) {
+          targetListItem.classList.add('highlight-text');
+        }
+      });
+
+      imgCard.addEventListener('mouseleave', () => {
+        const targetListItem = document.querySelector(`[data-target-img="${imgCard.id}"]`);
+        if (targetListItem) {
+          targetListItem.classList.remove('highlight-text');
+        }
+      });
+    });
+
+    // URL hash support for deep linking to a slide on refresh
+    function checkHash() {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#slide-')) {
+        const slideIndex = parseInt(hash.replace('#slide-', '')) - 1;
+        if (!isNaN(slideIndex) && slideIndex >= 0 && slideIndex < totalSlides) {
+          goToSlide(slideIndex);
+        }
+      }
+    }
+    
+    window.addEventListener('hashchange', checkHash);
+    
+    // Initial setup
+    checkHash();
+    resizeDeck();
+
+  </script>
+</body>
+</html>
