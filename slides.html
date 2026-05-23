@@ -272,17 +272,18 @@
     .image-grid-2x2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
+      grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
       gap: 12px;
       height: 100%;
     }
 
     .image-grid-2x2 .image-card {
       padding: 6px;
+      min-height: 0;
     }
 
     .image-grid-2x2 .image-card img {
-      max-height: 80%;
+      max-height: 72%;
     }
 
     .image-grid-horizontal {
